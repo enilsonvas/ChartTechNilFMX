@@ -31,8 +31,10 @@ type
     cdsDESPESA: TFloatField;
     cdsLIQUIDO: TFloatField;
     lytModBarHorz: TLayout;
-    Rectangle1: TRectangle;
-    Label1: TLabel;
+    layCicle: TLayout;
+    Layout1: TLayout;
+    Layout2: TLayout;
+    Circle1: TCircle;
     procedure FormShow(Sender: TObject);
     procedure spbBarClick(Sender: TObject);
   private

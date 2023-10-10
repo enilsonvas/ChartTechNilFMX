@@ -6,7 +6,9 @@ uses
   FrmModelo in 'FrmModelo.pas' {Form1},
   uChartTechNil.BarHorz in 'uChartTechNil.BarHorz.pas',
   uChartTechNil.Factory in 'uChartTechNil.Factory.pas',
-  uChartTechNil.Interfaces in 'uChartTechNil.Interfaces.pas';
+  uChartTechNil.Interfaces in 'uChartTechNil.Interfaces.pas',
+  uChartTechNil.BarVert in 'uChartTechNil.BarVert.pas',
+  uChartTechNil.Cicle in 'uChartTechNil.Cicle.pas';
 
 {$R *.res}
 

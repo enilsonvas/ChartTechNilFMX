@@ -22,22 +22,37 @@ object Form1: TForm1
     Align = Top
     Position.Y = 22.000000000000000000
     Size.Width = 1382.000000000000000000
-    Size.Height = 283.000000000000000000
+    Size.Height = 243.000000000000000000
     Size.PlatformDefault = False
     TabOrder = 2
   end
-  object Rectangle1: TRectangle
-    Position.X = 280.000000000000000000
-    Position.Y = 336.000000000000000000
-    Size.Width = 50.000000000000000000
-    Size.Height = 50.000000000000000000
+  object layCicle: TLayout
+    Align = Left
+    Position.Y = 265.000000000000000000
+    Size.Width = 721.000000000000000000
+    Size.Height = 471.000000000000000000
     Size.PlatformDefault = False
-  end
-  object Label1: TLabel
-    Position.X = 464.000000000000000000
-    Position.Y = 352.000000000000000000
-    Text = 'Label1'
-    TabOrder = 5
+    TabOrder = 4
+    object Layout1: TLayout
+      Align = Right
+      Position.X = 560.000000000000000000
+      Size.Width = 161.000000000000000000
+      Size.Height = 471.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 0
+    end
+    object Layout2: TLayout
+      Align = Client
+      Size.Width = 560.000000000000000000
+      Size.Height = 471.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 1
+      object Circle1: TCircle
+        Size.Width = 249.000000000000000000
+        Size.Height = 305.000000000000000000
+        Size.PlatformDefault = False
+      end
+    end
   end
   object cds: TClientDataSet
     Aggregates = <>

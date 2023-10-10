@@ -53,6 +53,16 @@ type
 
   iCicle = interface
     ['{7AB03023-4DC9-46B0-8863-8047602C1319}']
+    function Layout(aLayout: TLayout): iCicle;
+    function PosLegenda(aPos: TPosLegenda): iCicle;
+
+    function JsonArray(aJsonArray: TJSONArray): iCicle;
+    function DataSet(aDataSet: TDataSet): iCicle;
+    function AddFieldNameValue(aFieldNameValue: string): iCicle;
+    function AddColorArgument(aColor: TAlphaColor): iCicle;
+    function FormatValue(aFormatValue: string): iCicle;
+
+    procedure CarregarChart;
   end;
 
   iLine = interface
