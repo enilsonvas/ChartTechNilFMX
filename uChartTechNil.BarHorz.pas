@@ -31,18 +31,25 @@ type
 
   TChartBarHorz = class(TInterfacedObject, iBarHorz)
   private
-    FLayout: TLayout;
+    FLayout       : TLayout;
+    FLayoutGrafico: TLayout;
+    FLayoutLegend : TLayout;
+    FLayoutTitle  : TLayout;
+
+    FPosLegenda : TPosLegenda;
     FJsonArray: TJSONArray;
     FDataSet: TDataSet;
 
     FColorArgument: TList<TAlphaColor>;
     FFieldNameValue: TStringList;
     FTextBar: TStringList;
+    FLegendTextAnt: TStringList;
 
-    FFormatValue: string;
+
+    FFormatValue      : string;
     FFieldNameArgument: string;
-    FTextArgument: string;
-
+    FTextArgument     : string;
+    FTitle            : string;
 
     FLayoutHeight: Single;
     FLayoutWidth: Single;
@@ -53,6 +60,9 @@ type
     FSizeFontValue   : Single;
     FSizeFontArgument: Single;
     FSizeFontBarName : Single;
+    FSizeFontTitle   : Single;
+
+    FFontTitleFamily: TFontName;
 
     function AddBar(aLayout: TLayout;
       aBarName, aFormatValue: string; aValue, aMaxValue: Double; aWidth: Single;
@@ -61,6 +71,8 @@ type
     procedure ClearLayout;
     procedure CarregaDataSet;
     procedure CarregaJson;
+    procedure CarregaLayout(aPos: TPosLegenda);
+    procedure CarregaLegenda(aColor: TAlphaColor; aBarName: string);
 
   public
     TotalMax: TObjectList<TMaxValue>;
@@ -70,8 +82,12 @@ type
     destructor Destroy; override;
 
     function Layout(aLayout: TLayout): iBarHorz;
+    function PosLegenda(aPos: TPosLegenda): iBarHorz;
+
     function JsonArray(aJsonArray: TJSONArray): iBarHorz;
     function DataSet(aDataSet: TDataSet): iBarHorz;
+
+    function Title(aTitle: string): iBarHorz;
 
     function AddFieldNameArgument(aFieldNameArgument: string): iBarHorz;
     function AddColorArgument(aColor: TAlphaColor): iBarHorz;
@@ -84,6 +100,9 @@ type
     function SizeFontValue(aSize: Single): iBarHorz;
     function SizeFontArgument(aSize: Single): iBarHorz;
     function SizeFontBarName(aSize: Single): iBarHorz;
+    function SizeFontTitle(aSize: Single): iBarHorz;
+
+    function FontTitleFamily(aFontFamily: TFontName): iBarHorz;
 
     procedure CarregarChart;
   end;
@@ -97,7 +116,7 @@ function TChartBarHorz.AddBar(aLayout: TLayout;
       aColor: TAlphaColor=$00000000; idxBar: Integer=0): TLayout;
 var
   LBar: TRectangle;
-  lblBarName, lblBarValue: TLabel;
+  lblBarValue: TLabel;
   Perc: Double;
   LHeight: Single;
 begin
@@ -114,41 +133,24 @@ begin
 
   Result.Position.X := aWidth * idxBar;
 
-  //LABEL ARGUMENT
-  lblBarName          := TLabel.Create(Result);
-  lblBarName.Parent   := Result;
-  lblBarName.Name     := 'lblBarName_'+aID.ToString;
-  lblBarName.Height   := 30;
-  lblBarName.AutoSize := True;
-
-  lblBarName.StyledSettings := [];
-  lblBarName.TextSettings.HorzAlign := TTextAlign.Center;
-  lblBarName.TextSettings.Trimming  := TTextTrimming.Word;
-
-  lblBarName.Font.Style := [TFontStyle.fsBold];
-
-  if FSizeFontBarName > 0 then
-    lblBarName.Font.Size := FSizeFontBarName;
-
-  lblBarName.Text     := aBarName;
-
   //RECTANGLE
   LBar        := TRectangle.Create(Result);
   LBar.Parent := Result;
   LBar.Name   := 'LBar_'+aID.ToString;
   LBar.Stroke.Kind := TBrushKind.None;
   LBar.Margins.Left := 3;
+  LBar.Size.PlatformDefault := True;
 
   if aColor <> TAlphaColors.Null then
     LBar.Fill.Color := aColor;
+
+  LBar.Stroke.Kind := TBrushKind.None;
 
   Perc := SimpleRoundTo((aValue / aMaxValue) * 100);
 
   LHeight := aLayout.Height - Trunc((100 - SimpleRoundTo((aLayout.Height * Perc) / 100)));
   LBar.AnimateFloat('Height', LHeight , 0.8, TAnimationType.In, TInterpolationType.Back);
 
-
-  lblBarName.Align := TAlignLayout.MostBottom;
   LBar.Align       := TAlignLayout.Bottom;
 
   //FIELD VALUE
@@ -158,10 +160,13 @@ begin
   lblBarValue.AutoSize := True;
 
   if FSizeFontValue > 0 then
-    lblBarValue.Font.Size := FSizeFontValue;
+    begin
+      lblBarValue.Font.Size := FSizeFontValue;
+      lblBarValue.StyledSettings :=  [];
+    end
+  else
+    lblBarValue.StyledSettings         := lblBarValue.StyledSettings - [TStyledSetting.Size, TStyledSetting.FontColor];
 
-  lblBarValue.Font.Style := [TFontStyle.fsBold];
-  lblBarValue.StyledSettings := [];
   lblBarValue.TextSettings.HorzAlign := TTextAlign.Center;
   lblBarValue.TextSettings.Trimming  := TTextTrimming.Word;
 
@@ -205,6 +210,8 @@ begin
 end;
 
 procedure TChartBarHorz.CarregarChart;
+var
+  lblTitle: TLabel;
 begin
   ClearLayout;
 
@@ -233,6 +240,9 @@ begin
 
   FLayout.BeginUpdate;
 
+
+  CarregaLayout(FPosLegenda);
+
   if FDataSet <> nil then
     CarregaDataSet
   else if FJsonArray <> nil then
@@ -241,18 +251,83 @@ begin
   FLayout.EndUpdate;
 end;
 
+procedure TChartBarHorz.CarregaLegenda(aColor: TAlphaColor; aBarName: string);
+var
+  LBarLegend, LBarBackground: TRectangle;
+  lblBarLegend: TLabel;
+  aLayout: TLayout;
+begin
+  if FLegendTextAnt.IndexOf(aBarName) = -1 then
+    begin
+      FLegendTextAnt.Add(aBarName);
+
+      aLayout        := TLayout.Create(FLayoutLegend);
+      aLayout.Parent := FLayoutLegend;
+      aLayout.Align  := TAlignLayout.Top;
+      aLayout.Height := 20;
+
+      aLayout.Margins.Top := 3;
+      aLayout.Margins.Right := 3;
+      aLayout.Margins.Left  := 3;
+
+      LBarBackground := TRectangle.Create(aLayout);
+      LBarBackground.Parent := aLayout;
+      LBarBackground.Align := TAlignLayout.Client;
+      LBarBackground.Fill.Color := TAlphaColors.White;
+      LBarBackground.Stroke.Kind := TBrushKind.None;
+
+      //LEGENDA
+      LBarLegend        := TRectangle.Create(aLayout);
+      LBarLegend.Parent := aLayout;
+      LBarLegend.Align  := TAlignLayout.Left;
+      LBarLegend.Width  := 25;
+
+      LBarLegend.Margins.Top    := 3;
+      LBarLegend.Margins.Left   := 3;
+      LBarLegend.Margins.Right  := 3;
+      LBarLegend.Margins.Bottom := 3;
+
+      if aColor <> TAlphaColors.Null then
+        LBarLegend.Fill.Color := aColor;
+
+      LBarLegend.Stroke.Kind := TBrushKind.None;
+
+      //LABEL LEGEND
+      lblBarLegend          := TLabel.Create(aLayout);
+      lblBarLegend.Parent   := aLayout;
+      lblBarLegend.Name     := 'lblBarLegend_' +aBarName;
+      lblBarLegend.Align    := TAlignLayout.Client;
+      lblBarLegend.AutoSize := True;
+
+      lblBarLegend.Size.PlatformDefault := True;
+      lblBarLegend.StyledSettings       := lblBarLegend.StyledSettings - [TStyledSetting.Size, TStyledSetting.FontColor];
+      lblBarLegend.TextSettings.HorzAlign := TTextAlign.Center;
+      lblBarLegend.TextSettings.Trimming  := TTextTrimming.Word;
+      lblBarLegend.Font.Style             := [TFontStyle.fsBold];
+
+      if FSizeFontBarName > 0 then
+        lblBarLegend.Font.Size := FSizeFontBarName;
+
+      lblBarLegend.Text := aBarName;
+
+      LBarBackground.SendToBack;
+    end;
+end;
+
 procedure TChartBarHorz.CarregaDataSet;
 var
   I: Integer;
   LTotalMax: TMaxValue;
   LLayoutBase: TLayout;
   lblBarArgument: TLabel;
+  LTextBar: string;
+  LColor: TAlphaColor;
 begin
   FDataSet.DisableControls;
 
   FRecordCount  := FDataSet.RecordCount;
-  FLayoutHeight := FLayout.Height - 10;
-  FLayoutWidth  := FLayout.Width - 70;
+  FLayoutHeight := FLayoutGrafico.Height - 10;
+  FLayoutWidth  := FLayoutGrafico.Width - 70;
 
   for I := 0 to FFieldNameValue.Count - 1 do
     begin
@@ -271,8 +346,8 @@ begin
   FDataSet.First;
   while not FDataSet.Eof do
     begin
-      LLayoutBase        := TLayout.Create(FLayout);
-      LLayoutBase.Parent := FLayout;
+      LLayoutBase        := TLayout.Create(FLayoutGrafico);
+      LLayoutBase.Parent := FLayoutGrafico;
       LLayoutBase.Name   := 'LLayoutBase_' + FDataSet.RecNo.ToString;
       LLayoutBase.Align  := TAlignLayout.Left;
       LLayoutBase.Width  := Trunc(FLayoutWidth / FRecordCount);
@@ -289,7 +364,11 @@ begin
       lblBarArgument.Name     := 'lblBarArgument_' + aID.ToString;
       lblBarArgument.Height   := 20;
       lblBarArgument.AutoSize := True;
-      lblBarArgument.Text     := FDataSet.FieldByName(FFieldNameArgument).AsString;
+
+      if FTextArgument <> '' then
+        lblBarArgument.Text := FDataSet.FieldByName(FTextArgument).AsString
+      else
+        lblBarArgument.Text := FDataSet.FieldByName(FFieldNameArgument).AsString;
 
       lblBarArgument.StyledSettings := [];
 
@@ -305,13 +384,28 @@ begin
 
       for I := 0 to FFieldNameValue.Count - 1 do
         begin
+          if FTextBar.Count > 0 then
+            LTextBar := FTextBar.Strings[i];
+
+          if FColorArgument.Count > 0 then
+            LColor := FColorArgument.Items[i]
+          else
+            LColor := TAlphaColor($FF000000 or Random($00FFFFFF));
+
+          if FLayoutLegend <> nil then
+            if FTextBar.Count > 0 then
+              CarregaLegenda(LColor, FTextBar.Strings[i])
+            else
+              CarregaLegenda(LColor, lblBarArgument.Text);
+
           AddBar(LLayoutBase,
-                 FTextBar.Strings[i],
+                 LTextBar,
                  FFormatValue,
                  FDataSet.FieldByName(FFieldNameValue.Strings[i]).AsFloat,
                  TotalMax.Items[i].Total,
                  (LLayoutBase.Width / FFieldNameValue.Count),
-                 FColorArgument.Items[i], i);
+                 LColor,
+                 i);
         end;
 
       FDataSet.Next;
@@ -328,6 +422,8 @@ var
   LLayoutBase: TLayout;
   lblBarArgument: TLabel;
   X: Integer;
+  LTextBar: string;
+  LColor: TAlphaColor;
 begin
   FRecordCount := FJsonArray.Count;
   FLayoutHeight := FLayout.Height - 10;
@@ -337,13 +433,13 @@ begin
     begin
       LTotalMax := TMaxValue.Create;
 
-      FJsonArray
-      while not FDataSet.Eof do
-        begin
-          LTotalMax.Total := LTotalMax.Total + FDataSet.FieldByName(FFieldNameValue.Strings[i]).AsFloat;
-
-          FDataSet.Next;
-        end;
+//      FJsonArray
+//      while not FDataSet.Eof do
+//        begin
+//          LTotalMax.Total := LTotalMax.Total + FDataSet.FieldByName(FFieldNameValue.Strings[i]).AsFloat;
+//
+//          FDataSet.Next;
+//        end;
 
       TotalMax.Add(LTotalMax);
     end;
@@ -387,8 +483,16 @@ begin
 
       for X := 0 to FFieldNameValue.Count - 1 do
         begin
+          if FTextBar.Count > 0 then
+            LTextBar := FTextBar.Strings[i];
+
+          if FColorArgument.Count > 0 then
+            LColor := FColorArgument.Items[i]
+          else
+            LColor := TAlphaColor($FF000000 or Random($00FFFFFF));
+
           AddBar(LLayoutBase,
-                 FTextBar.Strings[i],
+                 LTextBar,
                  FFormatValue,
                  LJsonObj.GetValue<Double>(FFieldNameValue.Strings[i]),
                  TotalMax.Items[i].Total,
@@ -396,6 +500,92 @@ begin
                  FColorArgument.Items[i], i);
         end;
     end;
+end;
+
+procedure TChartBarHorz.CarregaLayout(aPos: TPosLegenda);
+var
+  lblTitle: TLabel;
+begin
+
+  case FPosLegenda of
+    aNone  :
+      begin
+        FLayoutGrafico := TLayout.Create(FLayout);
+        FLayoutGrafico := FLayout;
+
+        FLayoutGrafico.Position.Y := 0;
+        FLayoutGrafico.Position.X := 0;
+
+        FLayoutGrafico.Height := FLayout.Height;
+        FLayoutGrafico.Width  := FLayout.Width;
+      end;
+    aLeft:
+      begin
+        FLayoutLegend        := TLayout.Create(nil);
+        FLayoutLegend.Name   := 'FLayoutLegend';
+        FLayoutLegend.Parent := FLayout;
+        FLayoutLegend.Align  := TAlignLayout.Left;
+        FLayoutLegend.Height := FLayout.Height;
+        FLayoutLegend.Width  := (FLayout.Width * 10) / 100;
+
+        FLayoutGrafico        := TLayout.Create(nil);
+        FLayoutGrafico.Name   := 'FLayoutGrafico';
+        FLayoutGrafico.Parent := FLayout;
+        FLayoutGrafico.Align  := TAlignLayout.Client;
+        FLayoutGrafico.Height := FLayout.Height;
+        FLayoutGrafico.Width  := FLayout.Width - FLayoutLegend.Width;
+      end;
+    aRight :
+      begin
+        FLayoutLegend        := TLayout.Create(nil);
+        FLayoutLegend.Name   := 'FLayoutLegend';
+        FLayoutLegend.Parent := FLayout;
+        FLayoutLegend.Align  := TAlignLayout.Right;
+        FLayoutLegend.Height := FLayout.Height;
+        FLayoutLegend.Width  := (FLayout.Width * 10) / 100;
+
+        FLayoutGrafico        := TLayout.Create(nil);
+        FLayoutGrafico.Name   := 'FLayoutGrafico';
+        FLayoutGrafico.Parent := FLayout;
+        FLayoutGrafico.Align  := TAlignLayout.Client;
+        FLayoutGrafico.Height := FLayout.Height;
+        FLayoutGrafico.Width  := FLayout.Width - FLayoutLegend.Width;
+      end;
+    aBotoom:
+      begin
+        FLayoutGrafico        := TLayout.Create(nil);
+        FLayoutGrafico.Name   := 'FLayoutGrafico';
+        FLayoutGrafico.Parent := FLayout;
+        FLayoutGrafico.Position.Y := 0;
+        FLayoutGrafico.Align  := TAlignLayout.Contents;
+        FLayoutGrafico.Height := FLayout.Height - (FLayout.Height * 10) / 100;
+        FLayoutGrafico.Width  := FLayout.Width;
+
+        FLayoutLegend        := TLayout.Create(nil);
+        FLayoutLegend.Name   := 'FLayoutLegend';
+        FLayoutLegend.Parent := FLayout;
+        FLayoutLegend.Align  := TAlignLayout.MostBottom;
+        FLayoutLegend.Width  := FLayout.Width;
+        FLayoutLegend.Height := (FLayout.Height * 10) / 100;
+      end;
+  end;
+
+//  if FTitle <> '' then
+//    begin
+//      FLayoutTitle        := TLayout.Create(FLayout);
+//      FLayoutTitle.Parent := FLayout;
+//      FLayoutTitle.Align  := TAlignLayout.Top;
+//      FLayoutTitle.Height := 13;
+//
+//      lblTitle := TLabel.Create(FLayoutTitle);
+//      lblTitle.Parent := FLayoutTitle;
+//      lblTitle.Align  := TAlignLayout.Client;
+//      lblTitle.Text   := FTitle;
+//      lblTitle.TextAlign := TTextAlign.Center;
+//      lblTitle.TextSettings.Font.Style := [TFontStyle.fsBold];
+//      lblTitle.StyledSettings := lblTitle.StyledSettings - [TStyledSetting.Size, TStyledSetting.FontColor];
+//      lblTitle.Font.Size := FSizeFontTitle;
+//    end;
 end;
 
 procedure TChartBarHorz.ClearLayout;
@@ -409,6 +599,7 @@ begin
   FSizeFontValue    := 0;
   FSizeFontArgument := 0;
   FSizeFontBarName  := 0;
+  FSizeFontTitle    := 16;
 
   aID := 0;
   TotalMax := TObjectList<TMaxValue>.Create;
@@ -416,6 +607,7 @@ begin
   FFieldNameValue := TStringList.Create;
   FTextBar        := TStringList.Create;
   FColorArgument  := TList<TAlphaColor>.Create;
+  FLegendTextAnt  := TStringList.Create;
 end;
 
 function TChartBarHorz.DataSet(aDataSet: TDataSet): iBarHorz;
@@ -430,8 +622,15 @@ begin
   FTextBar.DisposeOf;
   TotalMax.DisposeOf;
   FColorArgument.DisposeOf;
+  FLegendTextAnt.DisposeOf;
 
   inherited;
+end;
+
+function TChartBarHorz.FontTitleFamily(aFontFamily: TFontName): iBarHorz;
+begin
+  Result := Self;
+  FFontTitleFamily := aFontFamily;
 end;
 
 function TChartBarHorz.FormatValue(aFormatValue: string): iBarHorz;
@@ -457,6 +656,12 @@ begin
   Result := Self.Create;
 end;
 
+function TChartBarHorz.PosLegenda(aPos: TPosLegenda): iBarHorz;
+begin
+  Result := Self;
+  FPosLegenda := aPos;
+end;
+
 function TChartBarHorz.SizeFontArgument(aSize: Single): iBarHorz;
 begin
   Result := Self;
@@ -469,10 +674,22 @@ begin
   FSizeFontBarName := aSize;
 end;
 
+function TChartBarHorz.SizeFontTitle(aSize: Single): iBarHorz;
+begin
+  Result := Self;
+  FSizeFontTitle := aSize;
+end;
+
 function TChartBarHorz.SizeFontValue(aSize: Single): iBarHorz;
 begin
   Result := Self;
   FSizeFontValue := aSize;
+end;
+
+function TChartBarHorz.Title(aTitle: string): iBarHorz;
+begin
+  Result := Self;
+  FTitle := aTitle;
 end;
 
 { TMaxValue }

@@ -1,0 +1,64 @@
+object Form1: TForm1
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 736
+  ClientWidth = 1382
+  WindowState = wsMaximized
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = []
+  OnShow = FormShow
+  DesignerMasterStyle = 0
+  object spbBar: TSpeedButton
+    Align = Top
+    Size.Width = 1382.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'GERAR BAR'
+    OnClick = spbBarClick
+  end
+  object lytModBarHorz: TLayout
+    Align = Top
+    Position.Y = 22.000000000000000000
+    Size.Width = 1382.000000000000000000
+    Size.Height = 283.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+  end
+  object Rectangle1: TRectangle
+    Position.X = 280.000000000000000000
+    Position.Y = 336.000000000000000000
+    Size.Width = 50.000000000000000000
+    Size.Height = 50.000000000000000000
+    Size.PlatformDefault = False
+  end
+  object Label1: TLabel
+    Position.X = 464.000000000000000000
+    Position.Y = 352.000000000000000000
+    Text = 'Label1'
+    TabOrder = 5
+  end
+  object cds: TClientDataSet
+    Aggregates = <>
+    Params = <>
+    Left = 56
+    Top = 392
+    object cdsMES: TIntegerField
+      FieldName = 'MES'
+    end
+    object cdsCMES: TStringField
+      FieldName = 'CMES'
+      Size = 10
+    end
+    object cdsRECEITA: TFloatField
+      FieldName = 'RECEITA'
+    end
+    object cdsDESPESA: TFloatField
+      FieldName = 'DESPESA'
+    end
+    object cdsLIQUIDO: TFloatField
+      FieldName = 'LIQUIDO'
+    end
+  end
+end

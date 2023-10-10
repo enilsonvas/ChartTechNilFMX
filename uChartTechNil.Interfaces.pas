@@ -14,12 +14,18 @@ uses
   FMX.Layouts;
 
 type
+  TPosLegenda = (aNone, aLeft, aRight, aBotoom);
+
   iBarHorz = interface
     ['{FCAF8907-0FFA-444D-9181-B63075A50837}']
 
     function Layout(aLayout: TLayout): iBarHorz;
+    function PosLegenda(aPos: TPosLegenda): iBarHorz;
+
     function JsonArray(aJsonArray: TJSONArray): iBarHorz;
     function DataSet(aDataSet: TDataSet): iBarHorz;
+
+    function Title(aTitle: string): iBarHorz;
 
     function AddFieldNameArgument(aFieldNameArgument: string): iBarHorz;
     function AddColorArgument(aColor: TAlphaColor): iBarHorz;
@@ -33,6 +39,7 @@ type
     function SizeFontArgument(aSize: Single): iBarHorz;
     function SizeFontBarName(aSize: Single): iBarHorz;
 
+    function FontTitleFamily(aFontFamily: TFontName): iBarHorz;
     procedure CarregarChart;
   end;
 
